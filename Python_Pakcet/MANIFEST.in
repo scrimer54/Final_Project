@@ -1,0 +1,9 @@
+include bot_config.txt
+include help.txt
+include phone_book.bin
+
+graft Final_Project
+prune Final_Project/__pycache__
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.pyd

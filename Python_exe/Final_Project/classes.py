@@ -6,167 +6,66 @@ import re
 import datetime
 import pickle
 
-# classes
-class Field:
-    def __init__(self, value):
-        self._value = None
-        self.value = value
+from abc import ABC, abstractmethod
+
+class UserInterface(ABC):
+    @abstractmethod
+    def display_contacts(self, contacts):
+        pass
     
-    def __str__(self):
-        return self.value
-
-    @property
-    def value(self) -> str:
-        return self._value
-
-
-class Name(Field):
-    @Field.value.setter
-    def value(self, new_value: str):
-        if new_value.isalpha():
-            self._value = new_value
-        else:
-            raise CustomError("please provide valid name")
-
-
-class Phone(Field):
-    def __init__(self, value):
-        super().__init__(str(value))
+    @abstractmethod
+    def display_notes(self, notes):
+        pass
     
-    @Field.value.setter
-    def value(self, new_value: str):
-        self._value = new_value
-
-
-
-class Birthday(Field):
-    def __init__(self, value): 
-        super().__init__(value)
+    @abstractmethod
+    def display_commands(self, commands):
+        pass
     
-    @Field.value.setter
-    def value(self, new_value):
-        dob = new_value.date()
-        self._value = dob
+    @abstractmethod
+    def get_user_input(self):
+        pass
+
+class ConsoleInterface(UserInterface):
+    def display_contacts(self, contacts):
+        print("Contacts:")
+        for contact in contacts:
+            print(contact)
     
-
-class Email(Field):
-    def __init__(self, value):
-        super().__init__(str(value))
+    def display_notes(self, notes):
+        print("Notes:")
+        for note in notes:
+            print(note)
     
-    @Field.value.setter
-    def value(self, new_value: str):
-        self._value = new_value
-
-
-class Address(Field):
-    def __init__(self, value):
-        super().__init__(str(value))
-
-    @Field.value.setter
-    def value(self, new_value: str):
-        self._value = new_value
-
-
-class Note(Field):
-    def __init__(self, value):
-        super().__init__(str(value))
-
-    @Field.value.setter
-    def value(self, new_value: str):
-        self._value = new_value
-
-
-class Record:
-    def __init__(self, name, phone=None, birthday=None, email=None, address=None, note=None): 
-        self.name = Name(value=name)
-        self.phones = []
-        if phone:
-            self.add_new_phone(phone)
-        if birthday:
-            self.birthday = Birthday(value=birthday)
-        if email:
-            self.email = Email(value=email)
-        if address:
-            self.address = Address(value=address)
-        if note:
-            self.note = Note(value=note)
-
-    def days_to_birthday(self):
-        current_date = datetime.date.today()
-        next_birthday = datetime.date(current_date.year, self.birthday.value.month, self.birthday.value.day)
-        
-        if current_date > next_birthday:
-            next_birthday = datetime.date(current_date.year + 1, self.birthday.value.month, self.birthday.value.day)
-            
-        days_until_birthday = (next_birthday - current_date).days
-
-        return days_until_birthday
-
-    def add_new_phone(self, phone): 
-        self.phones.append(Phone(value=phone))
-
-    def amend_phone(self, name, new_phone, old_phone): 
-        #phone_found = False
-        for stored_phone in self.phones.copy():
-            if str(stored_phone) == old_phone:
-                self.phones.remove(stored_phone)
-                self.add_new_phone(new_phone)
-                phone_found = True
-
-        if not phone_found:
-            raise CustomError("phone number was not found")
-
-    def remove_phone(self, phone):
-        #phone_found = False
-        for stored_phone in self.phones.copy():
-            if str(stored_phone) == phone:
-                self.phones.remove(stored_phone)
-                phone_found = True
-
-        if not phone_found:
-            raise CustomError("phone number was not found")
-
+    def display_commands(self, commands):
+        print("Available Commands:")
+        for command in commands:
+            print(command)
+    
+    def get_user_input(self):
+        return input("Enter your command: ")
+    
 class AddressBook(UserDict):
-    def __init__(self, file_name: str=None):
+    def __init__(self, interface, file_name: str=None):
         self.__file_name = None
         self.file_name = file_name
+        self.interface = interface
         super().__init__()
         self.restore()
     
-    @property
-    def file_name(self):
-        return self.__file_name
+    # ... (rest of the class remains the same)
+
+    def show_contacts(self):
+        self.interface.display_contacts(list(self.data.keys()))
+
+    def show_notes(self):
+        notes = [record.note.value for record in self.data.values() if record.note]
+        self.interface.display_notes(notes)
+
+    def show_commands(self, commands):
+        self.interface.display_commands(commands)
+
+    def get_user_input(self):
+        return self.interface.get_user_input()
     
-    @file_name.setter
-    def file_name(self, file_name:str):
-        self.__file_name = file_name
-        self.restore()
-
-    def restore(self):
-        try:
-            with open(self.file_name, "rb") as fh:
-                deserialized_book = pickle.load(fh)
-            self.data = deserialized_book
-            succsess = True
-        except:
-            succsess = False
-        return succsess
-
-    def save_changes(self):
-        with open(self.file_name, "wb") as fh:
-                pickle.dump(phone_book, fh)
-
-    def add_record(self, record: Record):
-        self.data[record.name.value] = record
-        self.save_changes()
-
-    def iterator(self, n): # n-number of records per page. is defined in show_page function
-        contacts_per_page = n
-        contacts = list(self.data.keys())
-        index = 0
-
-        while index < len(contacts):
-            yield contacts[index:index + contacts_per_page]
-            index += contacts_per_page
-
-phone_book = AddressBook()
+console_interface = ConsoleInterface()
+phone_book = AddressBook(console_interface)
